@@ -20,7 +20,7 @@ def bp1(k, N, step, explore, var=1, dx=0.01, figures={"bandits","rewards","actio
     @param explore: the probability given to 
     @param var: uses a constant variance  
     """
-    explore = round(explore,2)
+    # explore = round(explore,2)
 
     def arm(m, s):
         return lambda x: 1/sqrt(2*pi*s**2)*exp(-1/2*((x-m)/s)**2)
@@ -31,6 +31,7 @@ def bp1(k, N, step, explore, var=1, dx=0.01, figures={"bandits","rewards","actio
     start = time()
 
     means = [np.random.rand()*i for i in range(k)]
+    best_avg_reward = N * np.max(means)
     bandits = [arm(means[i], var) for i in range(k)]
 
     def bandit(i):
@@ -45,8 +46,9 @@ def bp1(k, N, step, explore, var=1, dx=0.01, figures={"bandits","rewards","actio
     rewards = np.array([0])
     actions = np.array([])
     for n in range(N):
-        if np.random.rand() < explore:
-            a = np.random.randint(k)            
+        if (callable(explore) and np.random.rand() < explore(n)) or \
+        (not callable(explore) and np.random.rand() < explore):
+            a = np.random.randint(k)
         else:
             w = np.where(act_val_ests == max(act_val_ests))
             a = w[0][np.random.randint(len(w[0]))]
@@ -56,6 +58,9 @@ def bp1(k, N, step, explore, var=1, dx=0.01, figures={"bandits","rewards","actio
         for i in range(k):
             act_val_ests_history[i] = np.append(act_val_ests_history[i], act_val_ests[i])
         rewards = np.append(rewards, r) 
+
+    if not callable(explore):
+        explore = round(explore, 2)
 
     if not figures is None:
         if "bandits" in figures:
@@ -99,7 +104,9 @@ def bp1(k, N, step, explore, var=1, dx=0.01, figures={"bandits","rewards","actio
         "bandits": bandits,
         "action_values": act_val_ests_history,
         "actions": actions,
-        "rewards": rewards
+        "rewards": rewards,
+        "best_avg_reward": best_avg_reward,
+        "score": np.sum(rewards) / best_avg_reward
     }
 
 def compare_exploration(k, N, step, erange=np.arange(0,1.1,0.1), var=1, dx=0.01, figures=None, figure=True):
